@@ -225,6 +225,62 @@ describe('parseCommand: help and unknown', () => {
   })
 })
 
+describe('parseCommand: non-AMR rosters (literal id match)', () => {
+  // Robots registered via `?robots=robot1,robot2` (docs/ROS2.md section 5.3)
+  // carry their bridge namespaces as ids — no AMR-N pattern to lean on.
+  const rosCtx = makeParserContext(['robot1', 'robot2'])
+
+  it('addresses robots by their registered id: "send robot1 to PACK-1"', () => {
+    const c = expectCommand(parseCommand('send robot1 to PACK-1', rosCtx))
+    expect(c).toEqual({ kind: 'send', robotIds: ['robot1'], station: 'PACK-1' })
+  })
+
+  it('matches ids case- and separator-insensitively: "send mule 2 to receiving"', () => {
+    const muleCtx = makeParserContext(['MULE-1', 'MULE-2'])
+    const c = expectCommand(parseCommand('send mule 2 to receiving', muleCtx))
+    expect(c).toEqual({ kind: 'send', robotIds: ['MULE-2'], station: 'RECEIVING' })
+  })
+
+  it('resolves underscore namespaces from the bridge: "send amr 6 to receiving"', () => {
+    const mockCtx = makeParserContext(['amr_6', 'amr_7'])
+    const c = expectCommand(parseCommand('send amr 6 to receiving', mockCtx))
+    expect(c).toEqual({ kind: 'send', robotIds: ['amr_6'], station: 'RECEIVING' })
+  })
+
+  it('parses multi-robot dispatch: "send robot1 and robot2 to staging"', () => {
+    const c = expectCommand(parseCommand('send robot1 and robot2 to staging', rosCtx))
+    expect(c).toEqual({ kind: 'send', robotIds: ['robot1', 'robot2'], station: 'STAGING' })
+  })
+
+  it('keeps the AMR-N heuristic for AMR rosters: "send robot 3 to staging"', () => {
+    const c = expectCommand(parseCommand('send robot 3 to staging', ctx))
+    expect(c).toEqual({ kind: 'send', robotIds: ['AMR-3'], station: 'STAGING' })
+  })
+
+  it('clarification options round-trip: "send robot2 to packing"', () => {
+    const r = parseCommand('send robot2 to packing', rosCtx)
+    expect(r.type).toBe('clarify')
+    if (r.type !== 'clarify') return
+    expect(r.options.map((o) => o.label)).toEqual(['PACK-1', 'PACK-2'])
+    const resolved = expectCommand(parseCommand(r.options[0].input, rosCtx))
+    expect(resolved).toEqual({ kind: 'send', robotIds: ['robot2'], station: 'PACK-1' })
+  })
+
+  it('the console example commands all parse for a non-AMR roster', () => {
+    // Mirrors the roster-derived examples in ui/CommandConsole.tsx.
+    const examples: Array<[string, Command['kind']]> = [
+      ['send robot1 to charge', 'charge'],
+      ['resume robot1', 'resume'],
+      ['status of robot2', 'status'],
+      ['reroute robot1', 'reroute'],
+      ['abort task on robot2', 'abort_task'],
+    ]
+    for (const [line, kind] of examples) {
+      expect(expectCommand(parseCommand(line, rosCtx)).kind).toBe(kind)
+    }
+  })
+})
+
 describe('matchStation (fuzzy matcher)', () => {
   it('matches exact aliases and canonical names', () => {
     expect(matchStation('receiving')).toEqual({ kind: 'station', name: 'RECEIVING' })

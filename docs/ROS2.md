@@ -80,7 +80,7 @@ per robot in the event log ("adjust the scale/offset transform").
 ## 3. URL parameters (scriptable startup)
 
 ```
-http://localhost:8101/?source=ros&bridge=ws://localhost:9090&robots=amr_1&cellm=0.1&originx=22&originy=13
+http://localhost:5173/?source=ros&bridge=ws://localhost:9090&robots=amr_1&cellm=0.1&originx=22&originy=13
 ```
 
 | Param | Meaning |

@@ -2,6 +2,9 @@
   "name": "fleet-console",
   "private": true,
   "version": "0.0.0",
+  "description": "Supervised-autonomy console for a warehouse AMR fleet: live map, command chat with a deterministic grammar parser, safety confirmations, and an optional ROS 2 bridge.",
+  "author": "Ahmed Sohail Butt",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "vite",
