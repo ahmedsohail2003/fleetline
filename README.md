@@ -216,7 +216,9 @@ identical parsing for every participant.
   visible at the moment of trust, not in a settings page.
 - **E-stop recovery friction.** Stopping is instant; resuming requires
   RELEASE → CONFIRM (with an auto-disarm timeout). The consequential action is
-  the one that makes robots move again.
+  the one that makes robots move again. A robot e-stopped individually stays
+  latched through a global release — like an industrial lockout, it is cleared
+  only per robot, and the release logs every robot it left stopped.
 - **Refusals are data.** A robot that declines a command ("AMR-5 is carrying a
   load") logs the refusal with its modality, because where each modality
   invites errors is a primary study measure — silent no-ops would destroy it.

@@ -81,6 +81,19 @@ describe('estop_all / clear_estop execution', () => {
     const notEngaged = executeCommand(store, { kind: 'clear_estop' })
     expect(notEngaged.lines[0].ok).toBe(false)
   })
+
+  it('names the robots an individual e-stop holds through the release', () => {
+    const store = quietStore()
+    store.sim.estopRobot('AMR-4')
+    executeCommand(store, { kind: 'estop_all' })
+    expect(confirmationPrompt(store, { kind: 'clear_estop' })).toContain('AMR-4')
+    const released = executeCommand(store, { kind: 'clear_estop' })
+    expect(released.lines[0].ok).toBe(true)
+    expect(released.lines[1].ok).toBe(false)
+    expect(released.lines[1].text).toContain('resume AMR-4')
+    expect(store.sim.getRobot('AMR-4').state).toBe('estopped')
+    expect(store.sim.robots.filter((r) => r.state === 'estopped')).toHaveLength(1)
+  })
 })
 
 describe('send / charge via chat', () => {
@@ -153,6 +166,17 @@ describe('pause / resume scopes', () => {
     expect(blocked.lines[0].ok).toBe(false)
     expect(blocked.lines[0].text).toContain('clear e-stop')
     expect(store.sim.getRobot('AMR-1').state).toBe('estopped')
+  })
+
+  it('a soft-stop is an individual lockout: it survives the global cycle until resumed by name', () => {
+    const store = quietStore()
+    executeCommand(store, { kind: 'pause', scope: { type: 'robots', ids: ['AMR-2'] } })
+    executeCommand(store, { kind: 'estop_all' })
+    executeCommand(store, { kind: 'clear_estop' })
+    expect(store.sim.getRobot('AMR-2').state).toBe('estopped')
+    const out = executeCommand(store, { kind: 'resume', scope: { type: 'robots', ids: ['AMR-2'] } })
+    expect(out.lines[0]).toEqual({ ok: true, text: 'AMR-2 resuming' })
+    expect(store.sim.getRobot('AMR-2').state).not.toBe('estopped')
   })
 })
 

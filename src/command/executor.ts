@@ -91,10 +91,15 @@ export function confirmationPrompt(store: FleetStore, cmd: Command): string {
       return ros
         ? `This immediately publishes emergency_stop to all ${sim.robots.length} robots on the bridge.`
         : `This immediately halts all ${sim.robots.length} robots and pauses task dispatch.`
-    case 'clear_estop':
+    case 'clear_estop': {
+      const held = sim.robots.filter((r) => r.state === 'estopped' && r.estopOrigin === 'individual')
+      const count = held.length > 0 ? `${sim.robots.length - held.length} of ${sim.robots.length}` : `all ${sim.robots.length}`
+      const holdNote =
+        held.length > 0 ? ` ${held.map((r) => r.id).join(' and ')} will stay halted under individual e-stop.` : ''
       return ros
-        ? `This publishes the e-stop release to all ${sim.robots.length} robots on the bridge — they resume on their own.`
-        : `This releases the global e-stop — all ${sim.robots.length} robots resume their previous activity.`
+        ? `This publishes the e-stop release to ${count} robots on the bridge — they resume on their own.${holdNote}`
+        : `This releases the global e-stop — ${count} robots resume their previous activity.${holdNote}`
+    }
     case 'abort_task': {
       const parts = cmd.robotIds.map((id) => {
         const r = sim.getRobot(id)
@@ -272,8 +277,15 @@ export function executeCommand(store: FleetStore, cmd: Command): ExecOutcome {
       if (!sim.globalEstop) {
         return outcome([{ ok: false, text: 'The global e-stop is not engaged' }])
       }
+      const held = sim.robots.filter((r) => r.state === 'estopped' && r.estopOrigin === 'individual')
       store.resumeAll()
-      return outcome([{ ok: true, text: 'Global e-stop released — fleet resuming' }])
+      return outcome([
+        { ok: true, text: 'Global e-stop released — fleet resuming' },
+        ...held.map((r) => ({
+          ok: false,
+          text: `${r.id} still stopped — its individual e-stop holds, release with "resume ${r.id}"`,
+        })),
+      ])
     }
 
     case 'help':

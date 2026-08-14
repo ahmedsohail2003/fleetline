@@ -118,6 +118,9 @@ export interface Robot {
   state: RobotState
   /** State to restore when an e-stop is released. */
   resumeState: RobotState | null
+  /** How the active e-stop was engaged: directly on this robot or by the
+   * global sweep. Individual lockouts survive a global release. */
+  estopOrigin: 'individual' | 'global' | null
   /** Battery percent, 0..100. */
   battery: number
   taskId: string | null
@@ -156,6 +159,7 @@ export function createRobot(id: string, cls: RobotClass, x: number, y: number, b
     pathIndex: 0,
     state: 'idle',
     resumeState: null,
+    estopOrigin: null,
     battery,
     taskId: null,
     mission: null,

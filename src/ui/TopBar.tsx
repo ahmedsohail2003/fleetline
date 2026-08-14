@@ -196,9 +196,15 @@ function EstopControl() {
       </div>
     )
   }
+  // Robots the release will not restart — their e-stop was engaged individually.
+  const held = fleetStore.sim.robots.filter((r) => r.state === 'estopped' && r.estopOrigin === 'individual')
   return (
     <div className="estop-group estop-confirm" role="group" aria-label="Confirm e-stop release">
-      <span className="estop-confirm-q">Resume all robots?</span>
+      <span className="estop-confirm-q">
+        {held.length > 0
+          ? `Resume all but ${held.map((r) => r.id).join(', ')} (individually e-stopped)?`
+          : 'Resume all robots?'}
+      </span>
       <button
         type="button"
         className="btn btn-okline"

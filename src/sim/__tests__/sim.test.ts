@@ -243,6 +243,54 @@ describe('e-stop', () => {
     sim.resumeRobot('AMR-1')
     expect(r.state).toBe('moving')
   })
+
+  it('an individually e-stopped robot survives the global release; swept robots resume', () => {
+    const sim = quietSim()
+    const locked = sim.getRobot('AMR-2')
+    sim.estopRobot('AMR-2')
+    sim.estopAll()
+    expect(sim.robots.every((x) => x.state === 'estopped')).toBe(true)
+    sim.resumeAll()
+    expect(sim.globalEstop).toBe(false)
+    expect(locked.state).toBe('estopped')
+    for (const x of sim.robots) {
+      if (x.id !== 'AMR-2') expect(x.state).not.toBe('estopped')
+    }
+  })
+
+  it('the global release logs which robots it left stopped', () => {
+    const sim = quietSim()
+    sim.estopRobot('AMR-2')
+    sim.estopAll()
+    sim.resumeAll()
+    const line = sim.events.events.find((e) => e.type === 'OPERATOR_ACTION' && e.message.includes('held'))
+    expect(line).toBeDefined()
+    expect(line!.message).toContain('AMR-2')
+    expect(line!.message).not.toContain('AMR-1')
+  })
+
+  it('a per-robot release still clears an individual lockout after a global cycle', () => {
+    const sim = quietSim()
+    sim.estopRobot('AMR-2')
+    sim.estopAll()
+    sim.resumeAll()
+    expect(sim.getRobot('AMR-2').state).toBe('estopped')
+    sim.resumeRobot('AMR-2')
+    expect(sim.getRobot('AMR-2').state).not.toBe('estopped')
+  })
+
+  it('an e-stop engaged on one robot during a global stop also survives the release', () => {
+    const sim = quietSim()
+    sim.estopAll()
+    sim.estopRobot('AMR-3') // operator latches this one individually while all are down
+    sim.resumeAll()
+    expect(sim.getRobot('AMR-3').state).toBe('estopped')
+    for (const x of sim.robots) {
+      if (x.id !== 'AMR-3') expect(x.state).not.toBe('estopped')
+    }
+    sim.resumeRobot('AMR-3')
+    expect(sim.getRobot('AMR-3').state).not.toBe('estopped')
+  })
 })
 
 describe('determinism', () => {

@@ -279,9 +279,19 @@ export class FleetSim {
 
   estopRobot(id: string, viaGlobal = false): void {
     const r = this.getRobot(id)
-    if (r.state === 'estopped') return
+    if (r.state === 'estopped') {
+      // A direct e-stop on an already-halted robot latches an individual
+      // lockout, so the robot survives a later global release.
+      if (!viaGlobal && r.estopOrigin !== 'individual') {
+        r.estopOrigin = 'individual'
+        this.kpi.interventions++
+        this.events.append(this.tick, 'OPERATOR_ACTION', `E-stop engaged on ${id} — holds through global release`, { robotId: id })
+      }
+      return
+    }
     r.resumeState = r.state
     r.state = 'estopped'
+    r.estopOrigin = viaGlobal ? 'global' : 'individual'
     if (!viaGlobal) {
       this.kpi.interventions++
       this.events.append(this.tick, 'OPERATOR_ACTION', `E-stop engaged on ${id}`, { robotId: id })
@@ -291,8 +301,12 @@ export class FleetSim {
   resumeRobot(id: string, viaGlobal = false): void {
     const r = this.getRobot(id)
     if (r.state !== 'estopped') return
+    // Lockout practice: a global release never clears an e-stop that was
+    // engaged on the robot individually — only a per-robot release does.
+    if (viaGlobal && r.estopOrigin === 'individual') return
     r.state = r.resumeState ?? 'idle'
     r.resumeState = null
+    r.estopOrigin = null
     if (!viaGlobal) {
       this.events.append(this.tick, 'OPERATOR_ACTION', `${id} released from e-stop`, { robotId: id })
     }
@@ -309,8 +323,16 @@ export class FleetSim {
   resumeAll(): void {
     if (!this.globalEstop) return
     this.globalEstop = false
+    const held = this.robots.filter((r) => r.state === 'estopped' && r.estopOrigin === 'individual')
     for (const r of this.robots) this.resumeRobot(r.id, true)
     this.events.append(this.tick, 'OPERATOR_ACTION', 'Global e-stop released — fleet resuming')
+    if (held.length > 0) {
+      this.events.append(
+        this.tick,
+        'OPERATOR_ACTION',
+        `${held.map((r) => r.id).join(', ')} held — individual e-stop${held.length > 1 ? 's stay' : ' stays'} engaged until released per robot`,
+      )
+    }
   }
 
   // -------------------------------------------------------------------------

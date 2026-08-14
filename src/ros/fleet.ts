@@ -246,7 +246,12 @@ export class RosFleetBridge {
   }
 
   resumeAll(): void {
-    for (const r of this.sim.robots) this.publishEstop(r.id, false)
+    for (const r of this.sim.robots) {
+      // Individually latched e-stops survive the global release (see
+      // FleetSim.resumeAll) — do not publish a release to those robots.
+      if (r.estopOrigin === 'individual') continue
+      this.publishEstop(r.id, false)
+    }
     this.sim.resumeAll()
     this.onChange()
   }
