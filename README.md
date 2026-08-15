@@ -1,5 +1,7 @@
 # Fleetline — an operations console for industrial AMR fleets
 
+[![CI](https://github.com/ahmedsohail2003/fleetline/actions/workflows/ci.yml/badge.svg)](https://github.com/ahmedsohail2003/fleetline/actions/workflows/ci.yml)
+
 ![Fleetline operating a simulated five-robot fleet: roster, live warehouse map, interventions queue, event log, and the natural-language command console](docs/img/fleetline-overview.png)
 
 Fleetline is a design-research prototype of the screen a single operator uses to
